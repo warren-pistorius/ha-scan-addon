@@ -37,13 +37,19 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates curl adduser \
         sane-utils libsane1 libusb-1.0-0 libusb-0.1-4 libjpeg62-turbo usbutils \
-        nodejs imagemagick ghostscript tesseract-ocr tesseract-ocr-eng \
+        nodejs imagemagick ghostscript tesseract-ocr tesseract-ocr-eng smbclient \
     && curl -fsSL -o /tmp/scanservjs.deb \
         "https://github.com/sbs20/scanservjs/releases/download/v${SCANSERVJS_VERSION}/scanservjs_${SCANSERVJS_VERSION}-1_all.deb" \
     && echo "${SCANSERVJS_SHA256}  /tmp/scanservjs.deb" | sha256sum -c - \
     && apt-get install -y --no-install-recommends /tmp/scanservjs.deb \
     && rm -f /tmp/scanservjs.deb \
     && rm -rf /var/lib/apt/lists/*
+
+# scanservjs pipes file lists to `convert @-`; Debian's ImageMagick 6 policy blocks indirect reads.
+RUN sed -i 's/policy domain="path" rights="none" pattern="@\*"/policy domain="path" rights="read" pattern="@*"/' \
+        /etc/ImageMagick-6/policy.xml \
+    && grep -q 'rights="read" pattern="@\*"' /etc/ImageMagick-6/policy.xml \
+    && grep -q 'rights="read | write" pattern="PDF"' /etc/ImageMagick-6/policy.xml
 
 COPY --from=brscan-build /out/ /
 

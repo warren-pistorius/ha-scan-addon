@@ -26,6 +26,18 @@ same moment.
 | `output_dir` | `/share/scans` | where finished scans are stored (must be under `/share`) |
 | `ocr_lang` | `eng` | Tesseract language for the OCR output formats (only `eng` is installed) |
 | `debug` | `false` | verbose SANE/brother backend logging in the add-on log |
+| `nas_copy` | `false` | also copy every finished scan to a Samba (SMB) share |
+| `nas_share` | `//192.168.68.95/warren` | the share, as `//host/share` |
+| `nas_path` | `documents/scans` | folder inside the share; created if missing |
+| `nas_username` | `warren` | Samba login |
+| `nas_password` | (empty) | Samba password; stored only in the add-on options |
+
+## Copy to a NAS (optional)
+
+Turn on `nas_copy` and fill in `nas_password` (and the other `nas_*` options if they
+differ). Each finished scan is still saved to `output_dir` first, then copied to the
+share with `smbclient`. A failed copy is written to the add-on log and does not fail
+the scan; the add-on log also says at startup whether the share was reachable.
 
 ## Direct LAN access (optional)
 

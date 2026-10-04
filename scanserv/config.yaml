@@ -26,7 +26,16 @@ options:
   output_dir: /share/scans
   ocr_lang: eng
   debug: false
+  nas_copy: false
+  nas_share: //192.168.68.95/warren
+  nas_path: documents/scans
+  nas_username: warren
 schema:
   output_dir: match(^/share/.+)
   ocr_lang: str
   debug: bool
+  nas_copy: bool
+  nas_share: match(^//[^/]+/[^/]+$)
+  nas_path: str?
+  nas_username: str?
+  nas_password: password?
