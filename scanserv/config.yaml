@@ -1,5 +1,5 @@
 name: Brother Scanner
-version: "1.0.0"
+version: "1.0.1"
 slug: brother_scanner
 description: Web scanning (scanservjs + SANE) for USB Brother scanners such as the DCP-1510, using the open-source brscan backend
 url: https://github.com/warren-pistorius/ha-scan-addon

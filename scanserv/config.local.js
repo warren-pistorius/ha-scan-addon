@@ -20,7 +20,27 @@ function copyToNas(fileInfo) {
   });
 }
 
+// The DCP-1510 flatbed is A4, but the brother backend advertises a legal-length area,
+// and sane_start rejects a scan that asks for the full advertised height.
+const FLATBED_MM = { x: 210, y: 297 };
+
+function clampFeature(feature, max) {
+  if (!feature || !Array.isArray(feature.limits)) {
+    return;
+  }
+  feature.limits[1] = Math.min(feature.limits[1], max);
+  feature.default = Math.min(feature.default ?? max, max);
+}
+
 module.exports = {
+  afterDevices(devices) {
+    devices.filter(d => d.id.startsWith('brother')).forEach(device => {
+      clampFeature(device.features['-x'], FLATBED_MM.x);
+      clampFeature(device.features['-y'], FLATBED_MM.y);
+      console.log(`${device.id}: scan area clamped to ${FLATBED_MM.x}x${FLATBED_MM.y} mm`);
+    });
+  },
+
   afterConfig(config) {
     if (process.env.SCANSERV_OUTPUT_DIR) {
       config.outputDirectory = process.env.SCANSERV_OUTPUT_DIR;
