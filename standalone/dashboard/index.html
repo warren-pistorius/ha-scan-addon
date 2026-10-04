@@ -110,7 +110,7 @@ const host = location.hostname;
 // the rest fall back to the box's LAN address.
 const PROXY_DOMAIN = 'pistorius.live';
 const PROXIED = { 8080: 'scan' };
-const LAN_HOST = '192.168.68.105';
+const LAN_HOST = '192.168.68.114';
 const proxied = host.endsWith('.' + PROXY_DOMAIN);
 const url = (port, path = '/') => {
   if (!proxied) return `${location.protocol}//${host}:${port}${path}`;
