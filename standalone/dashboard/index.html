@@ -106,7 +106,17 @@
 <footer>Refreshes every 15 s · <span id="host"></span></footer>
 <script>
 const host = location.hostname;
-const url = (port, path = '/') => `${location.protocol}//${host}:${port}${path}`;
+// Behind the reverse proxy only port 443 is forwarded: ports with their own proxied name use it,
+// the rest fall back to the box's LAN address.
+const PROXY_DOMAIN = 'pistorius.live';
+const PROXIED = { 8080: 'scan' };
+const LAN_HOST = '192.168.68.105';
+const proxied = host.endsWith('.' + PROXY_DOMAIN);
+const url = (port, path = '/') => {
+  if (!proxied) return `${location.protocol}//${host}:${port}${path}`;
+  if (PROXIED[port]) return `https://${PROXIED[port]}.${PROXY_DOMAIN}${path}`;
+  return `http://${LAN_HOST}:${port}${path}`;
+};
 const $ = id => document.getElementById(id);
 $('l-scan').href = url(8080);
 $('l-files').href = url(8080, '/#/files');
