@@ -1,0 +1,12 @@
+[Unit]
+Description=print-scan: follow the Brother USB device across plug/replug
+After=cups.service
+
+[Service]
+EnvironmentFile=-/etc/default/print-scan
+ExecStart=/usr/local/sbin/print-scan-usbwatch
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

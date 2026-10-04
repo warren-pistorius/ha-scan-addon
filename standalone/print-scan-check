@@ -1,0 +1,56 @@
+#!/bin/bash
+# One-shot health check for the print-scan container. Exit status is the number of failed checks.
+QUEUE="${PRINT_SCAN_QUEUE:-Brother_DCP_1510}"
+fails=0
+
+ok()   { printf '  \e[32mOK\e[0m    %s\n' "$*"; }
+bad()  { printf '  \e[31mFAIL\e[0m  %s\n' "$*"; fails=$((fails + 1)); }
+note() { printf '  \e[33m--\e[0m    %s\n' "$*"; }
+
+echo "print-scan health ($(hostname), $(hostname -I | awk '{print $1}'))"
+
+for unit in cups avahi-daemon airsaned scanservjs print-scan-usbwatch print-scan-dash; do
+    if systemctl is-active --quiet "$unit"; then ok "service $unit active"; else bad "service $unit $(systemctl is-active "$unit")"; fi
+done
+
+if lpstat -p "$QUEUE" >/dev/null 2>&1; then
+    ok "CUPS queue: $(lpstat -p "$QUEUE" | head -1)"
+    ok "queue device: $(lpstat -v "$QUEUE" | sed 's/^device for [^:]*: //')"
+    jobs=$(lpstat -o "$QUEUE" 2>/dev/null | wc -l)
+    note "jobs waiting: $jobs"
+else
+    bad "CUPS queue $QUEUE missing"
+fi
+
+usb=$(lsusb -d 04f9: 2>/dev/null)
+if [[ -n "$usb" ]]; then
+    ok "Brother USB device: $usb"
+    if lpinfo --include-schemes usb -v 2>/dev/null | grep -q 'usb://Brother/'; then
+        ok "CUPS sees it: $(lpinfo --include-schemes usb -v | awk '/usb:\/\/Brother\// {print $2; exit}')"
+    else
+        bad "CUPS usb backend does not list the Brother printer"
+    fi
+    sane=$(timeout 60 runuser -u saned -- scanimage -L 2>&1 | grep -i brother)
+    if [[ -n "$sane" ]]; then ok "scanimage -L (as saned): $sane"; else bad "scanimage -L (as saned) does not list the Brother scanner"; fi
+else
+    note "no Brother USB device attached (plug the DCP-1510 into lenomox)"
+fi
+
+# shellcheck disable=SC1091
+[[ -r /etc/default/print-scan ]] && . /etc/default/print-scan
+if [[ -n "${SCANSERV_NAS_SHARE:-}" && -r /etc/print-scan/nas.auth ]]; then
+    if smbclient "$SCANSERV_NAS_SHARE" -A /etc/print-scan/nas.auth -D "$SCANSERV_NAS_PATH" -c ls >/dev/null 2>&1; then
+        ok "NAS reachable: $SCANSERV_NAS_SHARE/$SCANSERV_NAS_PATH"
+    else
+        bad "NAS not reachable: $SCANSERV_NAS_SHARE/$SCANSERV_NAS_PATH"
+    fi
+else
+    note "NAS copy not configured"
+fi
+
+for port in 80 631 8080 8090; do
+    if curl -s -o /dev/null -m 5 "http://127.0.0.1:$port/"; then ok "port $port answers"; else bad "port $port not answering"; fi
+done
+
+if [[ $fails -eq 0 ]]; then echo "ALL OK"; else echo "$fails check(s) failed"; fi
+exit "$fails"

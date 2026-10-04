@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Brother DCP-1510 · print-scan</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --card: #fff; --text: #1d2330; --muted: #677085; --line: #e3e6ec;
+    --accent: #3157d5; --accent-text: #fff; --ok: #1f8a4c; --warn: #b7791f; --bad: #c53030;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --card: #1b2029; --text: #e7eaf0; --muted: #98a1b3; --line: #2b3240;
+      --accent: #6d8dff; --accent-text: #0d1117; --ok: #4cc38a; --warn: #e2b04a; --bad: #f2716b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 18px 16px 6px; max-width: 980px; margin: 0 auto; }
+  header h1 { margin: 0; font-size: 1.35rem; }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: .9rem; }
+  main { display: grid; gap: 14px; padding: 12px 16px 28px; max-width: 980px; margin: 0 auto; grid-template-columns: 1fr; }
+  @media (min-width: 760px) { main { grid-template-columns: 1fr 1fr; } .wide { grid-column: 1 / -1; } }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; min-width: 0; }
+  h2 { margin: 0 0 10px; font-size: 1.05rem; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .pill { font-size: .78rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); } .muted { color: var(--muted); }
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; font-size: .92rem; }
+  .kv dt { color: var(--muted); } .kv dd { margin: 0; overflow-wrap: anywhere; }
+  ul.list { list-style: none; margin: 8px 0 0; padding: 0; font-size: .92rem; }
+  ul.list li { padding: 8px 0; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 10px; }
+  ul.list li span:first-child { overflow-wrap: anywhere; min-width: 0; }
+  ul.list li span:last-child { color: var(--muted); white-space: nowrap; }
+  .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  a.btn, button { display: flex; align-items: center; justify-content: center; min-height: 48px; padding: 10px 14px; border-radius: 12px;
+    font: inherit; font-weight: 600; text-decoration: none; border: 1px solid var(--line); background: var(--bg); color: var(--text); cursor: pointer; text-align: center; }
+  a.btn.primary, button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  button:disabled { opacity: .55; cursor: default; }
+  form { display: grid; gap: 10px; margin-top: 12px; }
+  input[type=file] { font: inherit; width: 100%; padding: 10px; border: 1px dashed var(--line); border-radius: 12px; background: var(--bg); color: var(--text); }
+  .row { display: flex; gap: 10px; align-items: center; }
+  .row label { color: var(--muted); font-size: .92rem; }
+  input[type=number] { width: 72px; font: inherit; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+  .row button { flex: 1; }
+  #msg { font-size: .9rem; min-height: 1.3em; margin: 0; }
+  code { font-size: .85rem; background: var(--bg); padding: 1px 5px; border-radius: 6px; overflow-wrap: anywhere; }
+  footer { text-align: center; color: var(--muted); font-size: .8rem; padding-bottom: 20px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Brother DCP-1510</h1>
+  <p>print-scan server · <span id="updated">loading…</span></p>
+</header>
+<main>
+  <section>
+    <h2>Printer <span id="p-pill" class="pill muted">…</span></h2>
+    <dl class="kv">
+      <dt>Queue</dt><dd id="p-name">—</dd>
+      <dt>Status</dt><dd id="p-detail">—</dd>
+      <dt>Connection</dt><dd id="p-device">—</dd>
+    </dl>
+    <ul class="list" id="p-jobs"></ul>
+    <form id="print-form">
+      <input type="file" id="file" accept=".pdf,.jpg,.jpeg,.png,.txt,image/*,application/pdf,text/plain" required>
+      <div class="row">
+        <label for="copies">Copies</label>
+        <input type="number" id="copies" min="1" max="20" value="1">
+        <button class="primary" id="print-btn" type="submit">Print file</button>
+      </div>
+      <p id="msg" class="muted"></p>
+    </form>
+  </section>
+
+  <section>
+    <h2>Scanner <span id="s-pill" class="pill muted">…</span></h2>
+    <dl class="kv">
+      <dt>USB</dt><dd id="s-usb">—</dd>
+      <dt>SANE</dt><dd id="s-sane">—</dd>
+      <dt>Last scan</dt><dd id="s-last">—</dd>
+    </dl>
+    <div class="btns" style="margin-top:14px">
+      <a class="btn primary" id="l-scan" href="#">Scan</a>
+      <a class="btn" id="l-airsane" href="#">AirSane</a>
+    </div>
+  </section>
+
+  <section class="wide">
+    <h2>Recent scans on the NAS <span id="n-pill" class="pill muted">…</span></h2>
+    <p class="muted" style="margin:0;font-size:.9rem">Folder: <code id="n-loc">—</code></p>
+    <ul class="list" id="n-files"></ul>
+  </section>
+
+  <section class="wide">
+    <h2>Tools</h2>
+    <div class="btns">
+      <a class="btn" id="l-cups" href="#">CUPS admin</a>
+      <a class="btn" id="l-jobs" href="#">All print jobs</a>
+      <a class="btn" id="l-files" href="#">Scans on this box</a>
+      <a class="btn" href="/api/status">Raw status</a>
+    </div>
+  </section>
+</main>
+<footer>Refreshes every 15 s · <span id="host"></span></footer>
+<script>
+const host = location.hostname;
+const url = (port, path = '/') => `${location.protocol}//${host}:${port}${path}`;
+const $ = id => document.getElementById(id);
+$('l-scan').href = url(8080);
+$('l-files').href = url(8080, '/#/files');
+$('l-airsane').href = url(8090);
+$('l-cups').href = url(631, '/printers/');
+$('l-jobs').href = url(631, '/jobs/');
+$('host').textContent = host;
+
+const fmtSize = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+const fmtTime = t => t ? new Date(t * 1000).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '';
+const pill = (el, text, cls) => { el.textContent = text; el.className = 'pill ' + cls; };
+const li = (left, right) => { const e = document.createElement('li'); const a = document.createElement('span'); const b = document.createElement('span'); a.textContent = left; b.textContent = right; e.append(a, b); return e; };
+
+async function refresh() {
+  let s;
+  try {
+    const r = await fetch('/api/status', { cache: 'no-store' });
+    s = await r.json();
+  } catch (e) {
+    $('updated').textContent = 'status unavailable';
+    return;
+  }
+  $('updated').textContent = 'updated ' + new Date(s.time * 1000).toLocaleTimeString();
+
+  const p = s.printer;
+  if (!p.exists) {
+    pill($('p-pill'), 'no queue', 'bad');
+  } else {
+    const attached = s.usb.length > 0;
+    const st = !attached ? ['not connected', 'warn'] : p.state === 'idle' ? ['ready', 'ok'] : p.state === 'printing' ? ['printing', 'ok'] : [p.state, 'bad'];
+    pill($('p-pill'), st[0], st[1]);
+    $('p-name').textContent = p.name + (p.accepting ? '' : ' (not accepting jobs)');
+    $('p-detail').textContent = p.detail || p.summary;
+    $('p-device').textContent = attached ? 'USB' : 'USB, printer not plugged in';
+    $('p-jobs').replaceChildren(...(p.jobs.length ? p.jobs.map(j => li(j.id, j.when)) : [li('No jobs waiting', '')]));
+  }
+
+  const sc = s.scanner;
+  pill($('s-pill'), sc.present ? (sc.sane.length ? 'ready' : 'detecting') : 'not connected', sc.present ? (sc.sane.length ? 'ok' : 'warn') : 'warn');
+  $('s-usb').textContent = s.usb.length ? s.usb.join('; ') : 'No Brother device on USB';
+  $('s-sane').textContent = sc.sane.length ? sc.sane.join('; ') : (sc.present ? 'not listed yet' : '—');
+  if (sc.recent.length) {
+    const f = sc.recent[0];
+    const a = document.createElement('a');
+    a.href = url(8080, '/api/v1/files/' + encodeURIComponent(f.name));
+    a.textContent = f.name;
+    $('s-last').replaceChildren(a, document.createTextNode(' · ' + fmtTime(f.mtime)));
+  } else {
+    $('s-last').textContent = 'none yet';
+  }
+
+  const n = s.nas;
+  if (!n.configured) {
+    pill($('n-pill'), 'off', 'muted');
+  } else {
+    $('n-loc').textContent = n.location.replace(/\//g, '\\');
+    if (n.ok) {
+      pill($('n-pill'), n.count + ' file' + (n.count === 1 ? '' : 's'), 'ok');
+      $('n-files').replaceChildren(...(n.files.length ? n.files.map(f => li(f.name, fmtSize(f.size) + ' · ' + fmtTime(f.mtime))) : [li('No scans yet', '')]));
+    } else {
+      pill($('n-pill'), 'unreachable', 'bad');
+      $('n-files').replaceChildren(li(String(n.error), ''));
+    }
+  }
+}
+
+$('print-form').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const file = $('file').files[0];
+  if (!file) return;
+  const btn = $('print-btn');
+  btn.disabled = true;
+  $('msg').className = 'muted';
+  $('msg').textContent = 'Sending ' + file.name + '…';
+  try {
+    const r = await fetch('/api/print', { method: 'POST', body: file, headers: { 'X-Filename': encodeURIComponent(file.name), 'X-Copies': $('copies').value } });
+    const body = await r.json();
+    if (!r.ok) throw new Error(body.error || r.statusText);
+    $('msg').className = 'ok';
+    $('msg').textContent = 'Queued as ' + body.job;
+    $('file').value = '';
+    refresh();
+  } catch (e) {
+    $('msg').className = 'bad';
+    $('msg').textContent = 'Print failed: ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+refresh();
+setInterval(refresh, 15000);
+</script>
+</body>
+</html>

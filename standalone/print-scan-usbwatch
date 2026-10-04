@@ -1,0 +1,71 @@
+#!/bin/bash
+# Watches for the Brother USB device (vendor 04f9) appearing, disappearing or moving
+# to a new bus/device number, and re-points the services that cache it.
+# Containers get no udev events, so this polls sysfs.
+set -u
+
+QUEUE="${PRINT_SCAN_QUEUE:-Brother_DCP_1510}"
+INTERVAL="${PRINT_SCAN_POLL:-3}"
+DEVICES_JSON=/var/lib/scanservjs/devices.json
+
+log() { echo "usbwatch: $*"; }
+
+brother_nodes() {
+    local d bus dev
+    for d in /sys/bus/usb/devices/*; do
+        [[ -f "$d/idVendor" && "$(cat "$d/idVendor")" == "04f9" ]] || continue
+        bus=$(cat "$d/busnum"); dev=$(cat "$d/devnum")
+        printf '/dev/bus/usb/%03d/%03d\n' "$bus" "$dev"
+    done
+}
+
+fix_permissions() {
+    local node
+    for node in "$@"; do
+        [[ -c "$node" ]] || continue
+        chgrp scanner "$node" && chmod 0664 "$node"
+    done
+}
+
+point_queue_at_device() {
+    local uri current
+    uri=$(lpinfo --include-schemes usb -v 2>/dev/null | awk '/usb:\/\/Brother\// {print $2; exit}')
+    [[ -n "$uri" ]] || { log "no Brother usb URI from lpinfo yet"; return 1; }
+    current=$(lpstat -v "$QUEUE" 2>/dev/null | sed -n 's/^device for [^:]*: //p')
+    if [[ "$current" != "$uri" ]]; then
+        lpadmin -p "$QUEUE" -v "$uri" && log "queue $QUEUE now uses $uri"
+    fi
+    cupsenable "$QUEUE" 2>/dev/null
+    cupsaccept "$QUEUE" 2>/dev/null
+    return 0
+}
+
+on_change() {
+    local nodes=("$@")
+    rm -f "$DEVICES_JSON"
+    if (( ${#nodes[@]} )); then
+        log "Brother device present: ${nodes[*]}"
+        fix_permissions "${nodes[@]}"
+        point_queue_at_device || queue_pending=1
+    else
+        log "Brother device gone"
+    fi
+    systemctl try-restart airsaned.service scanservjs.service
+}
+
+last=""
+queue_pending=0
+while true; do
+    mapfile -t nodes < <(brother_nodes)
+    sig="${nodes[*]:-}"
+    if [[ "$sig" != "$last" ]]; then
+        last="$sig"
+        queue_pending=0
+        on_change "${nodes[@]}"
+    elif (( queue_pending )) && [[ -n "$sig" ]]; then
+        point_queue_at_device && queue_pending=0
+    fi
+    # Nodes recreated by a host-side reset lose the group grant.
+    [[ -n "$sig" ]] && fix_permissions "${nodes[@]}"
+    sleep "$INTERVAL"
+done
