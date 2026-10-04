@@ -1,0 +1,32 @@
+name: Brother Scanner
+version: "1.0.0"
+slug: brother_scanner
+description: Web scanning (scanservjs + SANE) for USB Brother scanners such as the DCP-1510, using the open-source brscan backend
+url: https://github.com/OWNER/ha-scan-addon
+arch:
+  - aarch64
+  - amd64
+init: false
+startup: application
+boot: auto
+usb: true
+ingress: true
+ingress_port: 8080
+panel_icon: mdi:scanner
+panel_title: Scanner
+panel_admin: false
+map:
+  - type: share
+    read_only: false
+ports:
+  8080/tcp: null
+ports_description:
+  8080/tcp: Direct web UI on the LAN without a Home Assistant login (disabled by default)
+options:
+  output_dir: /share/scans
+  ocr_lang: eng
+  debug: false
+schema:
+  output_dir: match(^/share/.+)
+  ocr_lang: str
+  debug: bool
